@@ -1,8 +1,8 @@
 # blobstore-s3 capability provider
 
 This capability provider 
-implements the "wasmcloud:example:factorial" capability
-and calculates "n factorial" for the provided whole number n.
+implements the "auxiliary::interfaces::blobstore" interface
+for Amazon S3 and S3-compliant (e.g. `minio`) storage servers
 
 Build with 'make'. Test with 'make test'.
 
