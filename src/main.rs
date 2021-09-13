@@ -7,6 +7,7 @@ use blobstore_interface::{
     Container, FileBlob, FileChunk, GetObjectInfoRequest, RemoveObjectRequest,
     StartDownloadRequest,
 };
+use chrono::{DateTime, Utc};
 use futures::TryStreamExt;
 use hyper::{Client, Uri};
 use hyper_proxy::{Intercept, Proxy, ProxyConnector};
@@ -20,6 +21,7 @@ use rusoto_s3::{
     HeadObjectOutput, HeadObjectRequest, ListObjectsV2Output, ListObjectsV2Request, Object,
     PutObjectRequest, S3Client, S3,
 };
+use serde::{Deserialize, Serialize};
 use std::{
     collections::HashMap,
     convert::Infallible,
@@ -30,6 +32,14 @@ use wasmbus_rpc::provider::prelude::*;
 type HttpConnector =
     hyper_proxy::ProxyConnector<hyper_tls::HttpsConnector<hyper::client::HttpConnector>>;
 
+const DEFAULT_AWS_ACCESS_KEY: &str = "minio";
+const DEFAULT_AWS_SECRET_KEY: &str = "minio123";
+const ENV_AWS_ACCESS_KEY: &str = "AWS_ACCESS_KEY";
+const ENV_AWS_ACCESS_SECRET: &str = "AWS_SECRET_ACCESS_KEY";
+const ENV_AWS_SESSION_TOKEN: &str = "AWS_SESSION_TOKEN";
+const ENV_AWS_REGION_ID: &str = "REGION";
+//const ENV_MINIO_ADDRESS: &str = "0.0.0.0";
+
 // main (via provider_main) initializes the threaded tokio executor,
 // listens to lattice rpcs, handles actor links,
 // and returns only when it receives a shutdown message
@@ -39,6 +49,65 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     eprintln!("blobstore-s3 provider exiting");
     Ok(())
+}
+
+/// Configuration for connecting to an S3 server
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+struct S3ClientConfiguration {
+    #[serde(default)]
+    region: Region,
+    #[serde(default)]
+    access_key_id: String,
+    #[serde(default)]
+    access_key_secret: String,
+    #[serde(default)]
+    session_token: Option<String>,
+    #[serde(default)]
+    expiration: Option<DateTime<Utc>>,
+}
+
+impl S3ClientConfiguration {
+    fn new_from(values: &HashMap<String, String>) -> RpcResult<S3ClientConfiguration> {
+        let mut config = if let Some(config_b64) = values.get("config_b64") {
+            let bytes = base64::decode(config_b64.as_bytes()).map_err(|e| {
+                RpcError::InvalidParameter(format!("invalid base64 encoding: {}", e))
+            })?;
+            serde_json::from_slice::<S3ClientConfiguration>(&bytes)
+                .map_err(|e| RpcError::InvalidParameter(format!("corrupt config_b64: {}", e)))?
+        } else if let Some(config) = values.get("config_json") {
+            serde_json::from_str::<S3ClientConfiguration>(config)
+                .map_err(|e| RpcError::InvalidParameter(format!("corrupt config_json: {}", e)))?
+        } else {
+            S3ClientConfiguration::default()
+        };
+        if let Some(access_key) = values.get(ENV_AWS_ACCESS_KEY) {
+            config.access_key_id = access_key.clone();
+        } else {
+            config.access_key_id = String::from(DEFAULT_AWS_ACCESS_KEY);
+        }
+        if let Some(access_secret) = values.get(ENV_AWS_ACCESS_SECRET) {
+            config.access_key_secret = access_secret.clone();
+        } else {
+            config.access_key_secret = String::from(DEFAULT_AWS_SECRET_KEY);
+        }
+        if let Some(session_token) = values.get(ENV_AWS_SESSION_TOKEN) {
+            config.session_token = Some(session_token.clone());
+        }
+        config.region = if values.contains_key(ENV_AWS_REGION_ID) {
+            Region::Custom {
+                name: values[ENV_AWS_REGION_ID].clone(),
+                endpoint: if values.contains_key("ENDPOINT") {
+                    values["ENDPOINT"].clone()
+                } else {
+                    "s3.us-east-1.amazonaws.com".to_string()
+                },
+            }
+        } else {
+            Region::UsEast1
+        };
+
+        Ok(config)
+    }
 }
 
 #[derive(Debug, PartialEq)]
@@ -117,6 +186,8 @@ impl BlobstoreReceiver for BlobstoreS3Provider {}
 impl ProviderHandler for BlobstoreS3Provider {
     async fn put_link(&self, ld: &LinkDefinition) -> RpcResult<bool> {
         // self.clients.write().unwrap().insert(config.module.clone(), Arc::new(s3::client_for_config(&config)?),);
+        // TODO: incorporate S3ClientConfiguration
+        let _config = S3ClientConfiguration::new_from(&ld.values)?;
         // TODO: write client_for_config!!!
         self.clients
             .write()

@@ -1,5 +1,6 @@
+use blobstore_interface::*;
 use wasmbus_rpc::provider::prelude::*;
-use wasmcloud_interface_factorial::*;
+//use wasmcloud_interface_factorial::*;
 use wasmcloud_test_util::{
     check,
     cli::print_test_results,
@@ -12,7 +13,9 @@ use wasmcloud_test_util::{run_selected, run_selected_spawn};
 #[tokio::test]
 async fn run_all() {
     let opts = TestOptions::default();
-    let res = run_selected_spawn!(&opts, health_check, factorial_0_1, factorial_more);
+    let res = run_selected_spawn!(&opts, health_check);
+    // TODO: test functionality for list_objects first
+    //let res = run_selected_spawn!(&opts, health_check, factorial_0_1, factorial_more);
     print_test_results(&res);
 
     let passed = res.iter().filter(|tr| tr.pass).count();
@@ -34,6 +37,17 @@ async fn health_check(_opt: &TestOptions) -> RpcResult<()> {
     Ok(())
 }
 
+/// test list_objects() against Minio server
+async fn test_list_objects(_opt: &TestOptions) -> RpcResult<()> {
+    let prov = test_provider().await;
+
+    // health check
+    let hc = prov.health_check().await;
+    check!(hc.is_ok())?;
+    Ok(())
+}
+
+/*
 /// tests of the Factorial capability
 async fn factorial_0_1(_opt: &TestOptions) -> RpcResult<()> {
     let prov = test_provider().await;
@@ -70,3 +84,4 @@ async fn factorial_more(_opt: &TestOptions) -> RpcResult<()> {
 
     Ok(())
 }
+*/
