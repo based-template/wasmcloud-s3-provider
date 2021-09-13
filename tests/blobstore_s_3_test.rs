@@ -37,6 +37,7 @@ async fn health_check(_opt: &TestOptions) -> RpcResult<()> {
     Ok(())
 }
 
+/*
 /// test list_objects() against Minio server
 async fn test_list_objects(_opt: &TestOptions) -> RpcResult<()> {
     let prov = test_provider().await;
@@ -46,7 +47,7 @@ async fn test_list_objects(_opt: &TestOptions) -> RpcResult<()> {
     check!(hc.is_ok())?;
     Ok(())
 }
-
+*/
 /*
 /// tests of the Factorial capability
 async fn factorial_0_1(_opt: &TestOptions) -> RpcResult<()> {

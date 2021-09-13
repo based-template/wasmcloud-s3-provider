@@ -7,7 +7,7 @@ use blobstore_interface::{
     Container, FileBlob, FileChunk, GetObjectInfoRequest, RemoveObjectRequest,
     StartDownloadRequest,
 };
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, FixedOffset, Utc};
 use futures::TryStreamExt;
 use hyper::{Client, Uri};
 use hyper_proxy::{Intercept, Proxy, ProxyConnector};
@@ -38,6 +38,7 @@ const ENV_AWS_ACCESS_KEY: &str = "AWS_ACCESS_KEY";
 const ENV_AWS_ACCESS_SECRET: &str = "AWS_SECRET_ACCESS_KEY";
 const ENV_AWS_SESSION_TOKEN: &str = "AWS_SESSION_TOKEN";
 const ENV_AWS_REGION_ID: &str = "REGION";
+const ENV_TOKEN_EXPIRATION_KEY: &str = "AWS_CREDENTIAL_EXPIRATION";
 //const ENV_MINIO_ADDRESS: &str = "0.0.0.0";
 
 // main (via provider_main) initializes the threaded tokio executor,
@@ -104,6 +105,19 @@ impl S3ClientConfiguration {
             }
         } else {
             Region::UsEast1
+        };
+        config.expiration = match values.get(ENV_TOKEN_EXPIRATION_KEY) {
+            Some(val) => Some(
+                DateTime::<FixedOffset>::parse_from_rfc3339(&val)
+                    .map(|dt| dt.with_timezone(&Utc))
+                    .map_err(|e| {
+                        RpcError::InvalidParameter(format!(
+                            "invalid value for token expiration in environment: {}",
+                            e
+                        ))
+                    })?,
+            ),
+            _ => None,
         };
 
         Ok(config)
