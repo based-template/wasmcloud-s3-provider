@@ -27,8 +27,7 @@ toml = "0.5"
 blobstore-interface = { git = "https://github.com/based-template/auxiliary-blobstore-interface.git" }
 rusoto_core = { version="0.46.0", default_features=false, features=["rustls"] }
 rusoto_s3 = { version="0.46.0", default_features=false, features=["rustls"] }
-# wasmcloud-interface-factorial = "0.1"
-wasmbus-rpc = "0.3"
+wasmbus-rpc = "0.4"
 
 # test dependencies
 [dev-dependencies]
