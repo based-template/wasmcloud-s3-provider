@@ -1,6 +1,6 @@
 # blobstore-s3 Makefile
 
-CAPABILITY_ID = "wasmcloud:example:factorial"
+CAPABILITY_ID = "auxiliary::interfaces::blobstore"
 NAME = "blobstore-s3"
 VENDOR = "OMT"
 PROJECT = blobstore_s_3
