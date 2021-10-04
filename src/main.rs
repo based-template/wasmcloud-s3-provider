@@ -14,11 +14,11 @@ use hyper_proxy::{Intercept, Proxy, ProxyConnector};
 use hyper_tls::HttpsConnector;
 #[allow(unused_imports)]
 use log::{debug, error, info, trace, warn};
-use rusoto_core::credential::{DefaultCredentialsProvider, StaticProvider};
+use rusoto_core::credential::StaticProvider;
 use rusoto_core::Region;
 use rusoto_s3::{
     CreateBucketRequest, DeleteBucketRequest, DeleteObjectRequest, GetObjectRequest,
-    HeadObjectOutput, HeadObjectRequest, ListObjectsV2Output, ListObjectsV2Request, Object,
+    HeadObjectOutput, HeadObjectRequest, ListObjectsV2Output, ListObjectsV2Request,
     PutObjectRequest, S3Client, S3,
 };
 use serde::{Deserialize, Serialize};
@@ -100,7 +100,8 @@ impl S3ClientConfiguration {
                 endpoint: if values.contains_key("ENDPOINT") {
                     values["ENDPOINT"].clone()
                 } else {
-                    "s3.us-east-1.amazonaws.com".to_string()
+                    "http://127.0.0.1:9000".to_string()
+                    //"s3.us-east-1.amazonaws.com".to_string()
                 },
             }
         } else {
@@ -154,11 +155,18 @@ fn client_for_config(config_map: &HashMap<String, String>) -> RpcResult<S3Client
             endpoint: if config_map.contains_key("ENDPOINT") {
                 config_map["ENDPOINT"].clone()
             } else {
-                "s3.us-east-1.amazonaws.com".to_string()
+                "http://127.0.0.1:9000".to_string()
             },
         }
     } else {
-        Region::UsEast1
+        Region::Custom {
+            name: "us-east-1".to_string(),
+            endpoint: if config_map.contains_key("ENDPOINT") {
+                config_map["ENDPOINT"].clone()
+            } else {
+                "http://127.0.0.1:9000".to_string()
+            },
+        }
     };
 
     let client = if config_map.contains_key("AWS_ACCESS_KEY") {
@@ -181,7 +189,14 @@ fn client_for_config(config_map: &HashMap<String, String>) -> RpcResult<S3Client
         let client = rusoto_core::HttpClient::from_builder(hyper_builder, connector);
         S3Client::new_with(client, provider, region)
     } else {
-        let provider = DefaultCredentialsProvider::new().unwrap();
+        let provider = StaticProvider::new(
+            DEFAULT_AWS_ACCESS_KEY.to_string(),
+            DEFAULT_AWS_SECRET_KEY.to_string(),
+            config_map.get("AWS_TOKEN").cloned(),
+            config_map
+                .get("TOKEN_VALID_FOR")
+                .map(|t| t.parse::<i64>().unwrap()),
+        );
         S3Client::new_with(
             rusoto_core::request::HttpClient::new()
                 .expect("Failed to create HTTP client for S3 provider"),
@@ -256,11 +271,13 @@ impl BlobstoreS3Provider {
             total_bytes: byte_size,
         };
 
-        let rd = self.links.read().unwrap();
+        let rd = self.links.read().unwrap().clone();
         let link_def = rd
             .get(&actor_id)
             .ok_or_else(|| RpcError::Other(format!("Could not retrieve link for {}", actor_id)))?;
-        self.dispatch_chunk(link_def, &fc).await;
+        let this = self.clone();
+        let cloned_link_def = link_def.clone();
+        tokio::spawn(async move { this.dispatch_chunk(&cloned_link_def, &fc).await });
 
         Ok(())
     }
@@ -372,19 +389,60 @@ impl Blobstore for BlobstoreS3Provider {
             .actor
             .as_ref()
             .ok_or_else(|| RpcError::InvalidParameter("no actor in request".to_string()))?;
-        let rt = tokio::runtime::Runtime::new().unwrap();
-        let objects = rt
-            .block_on(list_objects(
-                container_id,
-                &self.clients.read().unwrap()[actor_id],
-            ))
-            .unwrap();
+        /*
+        async fn list_objects(
+            container_id: String,
+            client: &S3Client,
+        ) -> Result<Option<Vec<Object>>, Box<dyn std::error::Error + Sync + Send>> {
+            let list_obj_req = ListObjectsV2Request {
+                bucket: container_id.to_owned(),
+                ..Default::default()
+            };
+            let res: ListObjectsV2Output = client.list_objects_v2(list_obj_req).await?;
+            Ok(res.contents)
+        }
+                 */
+        let client = &self.clients.read().unwrap()[actor_id].clone();
+        //let objects = list_objects(container_id, client).await.unwrap();
+        let list_obj_req = ListObjectsV2Request {
+            bucket: container_id.trim_matches('/').to_owned(),
+            ..Default::default()
+        };
+        let res: ListObjectsV2Output = client
+            .list_objects_v2(list_obj_req)
+            .await
+            .map_err(|e| RpcError::Other(format!("list_objects_v2_error(): {}", e).to_string()))?;
+        let objects = res.contents;
+        /*
+        let result = head_object(
+            &s3_client,
+            arg.container_id.to_string(),
+            arg.blob_id.to_string(),
+        )
+        .await
+        .map_or_else(
+            |_| FileBlob {
+                id: "none".to_string(),
+                container: Container {
+                    id: "none".to_string(),
+                },
+                byte_size: 0,
+            },
+            |ob| FileBlob {
+                id: arg.blob_id.to_string(),
+                container: Container {
+                    id: arg.container_id.to_string(),
+                },
+                byte_size: ob.content_length.unwrap() as u64,
+            },
+        );
+        */
         let blobs = if let Some(v) = objects {
             v.iter()
                 .map(|ob| FileBlob {
                     id: ob.key.clone().unwrap(),
                     container: Container {
-                        id: arg.to_string().clone(),
+                        id: arg.to_string().trim_matches('/').to_string(),
                     },
                     byte_size: ob.size.unwrap() as u64,
                 })
@@ -440,45 +498,56 @@ impl Blobstore for BlobstoreS3Provider {
             .ok_or_else(|| RpcError::InvalidParameter("no actor in request".to_string()))?
             .clone();
         let s3_client = self.clients.read().unwrap()[&actor_id.to_string()].clone();
-        let container_id = arg.container_id.clone();
+        //let container_id = String::from("whatever");
+        let initial_container_id = arg.container_id.clone();
+        let container_id = initial_container_id.trim_matches('/').to_string();
+        //let container_id = arg.container_id.trim_matches('/').clone();
+        //let chunk_size = 0;
         let chunk_size = arg.chunk_size;
-        let blob_id = arg.blob_id.clone();
+        //let blob_id = String::from("fake_blob_id");
+        let initial_blob_id = arg.blob_id.clone();
+        let blob_id = initial_blob_id
+            .trim_matches(|c| c == '/' || c == '?')
+            .to_string();
+        //let blob_id = arg.blob_id.trim_matches(|c| c == '/' || c == '?').clone();
         let this = self.clone();
 
         let byte_size = {
-            let rt = tokio::runtime::Runtime::new().unwrap();
-            let info = rt
-                .block_on(head_object(
-                    &s3_client,
-                    container_id.clone(),
-                    blob_id.clone(),
-                ))
+            let info = head_object(&s3_client, container_id.clone(), blob_id.clone())
+                .await
                 .unwrap();
             info.content_length.unwrap() as u64
         };
 
-        std::thread::spawn(move || {
-            let actor_id = actor_id.to_string();
+        let actor_id = actor_id.to_string();
 
-            let chunk_count = expected_chunks(byte_size, chunk_size);
-            let rt = tokio::runtime::Runtime::new().unwrap();
-            rt.block_on(async {
-                for idx in 0..chunk_count {
-                    this.manage_chunk_dispatch(
-                        idx,
-                        s3_client.clone(),
-                        container_id.to_string(),
-                        blob_id.to_string(),
-                        chunk_size,
-                        byte_size,
-                        actor_id.clone(),
-                    )
-                    .await
-                    .map_err(|e| RpcError::from(format!("start_download(): {}", e)))
-                    .unwrap();
-                }
-            })
-        });
+        let chunk_count = expected_chunks(byte_size, chunk_size);
+        let handle = tokio::runtime::Handle::current();
+        //futures::executor::block_on(async {
+        async {
+            handle
+                .spawn(async move {
+                    for idx in 0..chunk_count {
+                        this.manage_chunk_dispatch(
+                            idx,
+                            s3_client.clone(),
+                            container_id.clone(),
+                            blob_id.clone(),
+                            chunk_size,
+                            byte_size,
+                            actor_id.clone(),
+                        )
+                        .await
+                        .map_err(|e| RpcError::from(format!("start_download(): {}", e)))
+                        .unwrap();
+                    }
+                })
+                .await
+                .map_err(|e| RpcError::from(format!("start_download() handle spawn(): {}", e)))
+                .unwrap();
+        }
+        .await;
+        //});
         Ok(BlobstoreResult {
             success: true,
             error: None,
@@ -519,30 +588,34 @@ impl Blobstore for BlobstoreS3Provider {
             .ok_or_else(|| RpcError::InvalidParameter("no actor in request".to_string()))?
             .clone();
         let s3_client = self.clients.read().unwrap()[&actor_id.to_string()].clone();
-        let rt = tokio::runtime::Runtime::new().unwrap();
-        //let info = rt
-        Ok(rt
-            .block_on(head_object(
-                &s3_client,
-                arg.container_id.to_string(),
-                arg.blob_id.to_string(),
-            ))
-            .map_or_else(
-                |_| FileBlob {
+        let result = head_object(
+            &s3_client,
+            arg.container_id.trim_matches('/').to_string(),
+            arg.blob_id
+                .trim_matches(|c| c == '/' || c == '?')
+                .to_string(),
+        )
+        .await
+        .map_or_else(
+            |_| FileBlob {
+                id: "none".to_string(),
+                container: Container {
                     id: "none".to_string(),
-                    container: Container {
-                        id: "none".to_string(),
-                    },
-                    byte_size: 0,
                 },
-                |ob| FileBlob {
-                    id: arg.blob_id.to_string(),
-                    container: Container {
-                        id: arg.container_id.to_string(),
-                    },
-                    byte_size: ob.content_length.unwrap() as u64,
+                byte_size: 0,
+            },
+            |ob| FileBlob {
+                id: arg
+                    .blob_id
+                    .trim_matches(|c| c == '/' || c == '?')
+                    .to_string(),
+                container: Container {
+                    id: arg.container_id.trim_matches('/').to_string(),
                 },
-            ))
+                byte_size: ob.content_length.unwrap() as u64,
+            },
+        );
+        Ok(result)
     }
 }
 
@@ -580,7 +653,7 @@ fn expected_chunks(total_bytes: u64, chunk_size: u64) -> u64 {
 
 async fn create_bucket(container_id: String, client: &S3Client) -> RpcResult<Container> {
     let create_bucket_req = CreateBucketRequest {
-        bucket: container_id.to_string(),
+        bucket: container_id.trim_matches('/').to_string(),
         ..Default::default()
     };
     client
@@ -589,7 +662,7 @@ async fn create_bucket(container_id: String, client: &S3Client) -> RpcResult<Con
         .map_err(|_e| RpcError::Other("create_bucket() failed".to_string()))
         .unwrap();
     Ok(Container {
-        id: container_id.clone(),
+        id: container_id.trim_matches('/').to_string(),
     })
 }
 
@@ -643,6 +716,7 @@ async fn remove_object(
     Ok(())
 }
 
+/*
 async fn list_objects(
     container_id: String,
     client: &S3Client,
@@ -654,6 +728,7 @@ async fn list_objects(
     let res: ListObjectsV2Output = client.list_objects_v2(list_obj_req).await?;
     Ok(res.contents)
 }
+*/
 
 async fn head_object(
     client: &S3Client,
@@ -661,7 +736,7 @@ async fn head_object(
     key: String,
 ) -> Result<HeadObjectOutput, Box<dyn std::error::Error + Sync + Send>> {
     let head_req = HeadObjectRequest {
-        bucket: container_id.to_owned(),
+        bucket: container_id.trim_matches('/').to_owned(),
         key: key.to_owned(),
         ..Default::default()
     };
