@@ -1,6 +1,6 @@
 [package]
 name = "blobstore-s3"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2018"
 resolver = "2"
 
@@ -27,11 +27,11 @@ toml = "0.5"
 blobstore-interface = { git = "https://github.com/based-template/auxiliary-blobstore-interface.git" }
 rusoto_core = { version="0.46.0", default_features=false, features=["rustls"] }
 rusoto_s3 = { version="0.46.0", default_features=false, features=["rustls"] }
-wasmbus-rpc = "0.4"
+wasmbus-rpc = "0.5.2"
 
 # test dependencies
 [dev-dependencies]
-wasmcloud-test-util = "0.1"
+wasmcloud-test-util = "0.1.7"
 
 [[bin]]
 name = "blobstore_s_3"

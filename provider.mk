@@ -31,7 +31,8 @@ NAME ?= $(PROJECT)
 
 WASH ?= wash
 
-oci_url_base ?= localhost:5000/v2
+#oci_url_base ?= localhost:5000/v2
+oci_url_base ?= testregistry.domain.com
 oci_url      ?= $(oci_url_base)/$(bin_name):$(VERSION)
 ifeq ($(WASH_REG_USER),)
 	oci_insecure := --insecure
@@ -139,7 +140,9 @@ endif
 
 # push par file to registry
 push: $(dest_par)
-	$(WASH) reg push $(oci_insecure) $(oci_url) $(dest_par)
+	$(WASH) reg push $(oci_url) $(dest_par)
+
+#$(WASH) reg push $(oci_insecure) $(oci_url) $(dest_par)
 
 
 

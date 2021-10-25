@@ -283,14 +283,30 @@ impl BlobstoreS3Provider {
     }
 
     async fn dispatch_chunk(&self, ld: &LinkDefinition, chunk: &FileChunk) {
-        let actor = BlobReceiverSender::for_actor(ld);
-        if let Err(e) = actor.receive_chunk(&Context::default(), chunk).await {
-            error!(
-                "chunk send to actor: {}, err: {}",
-                &ld.actor_id,
-                e.to_string()
-            );
+        let ld_clone = ld.clone();
+        let chunk_clone = chunk.clone();
+        let handle = tokio::runtime::Handle::current();
+        async {
+            if let Err(e) = handle
+                .spawn(async move {
+                    let actor = BlobReceiverSender::for_actor(&ld_clone);
+                    if let Err(e) = actor.receive_chunk(&Context::default(), &chunk_clone).await {
+                        error!(
+                            "chunk send to actor: {}, err: {}",
+                            &ld_clone.actor_id,
+                            e.to_string()
+                        );
+                    };
+                })
+                .await
+            {
+                error!(
+                    "dispatch_chunk(): error in handle.spawn(): {}",
+                    e.to_string()
+                );
+            }
         }
+        .await;
     }
 }
 
