@@ -251,7 +251,7 @@ impl BlobstoreS3Provider {
         actor_id: String,
     ) -> RpcResult<()> {
         let start = idx * chunk_size;
-        let mut end = start + chunk_size;
+        let mut end = start + chunk_size - 1;
         if end > byte_size {
             end = byte_size - 1;
         }
@@ -277,12 +277,14 @@ impl BlobstoreS3Provider {
             .ok_or_else(|| RpcError::Other(format!("Could not retrieve link for {}", actor_id)))?;
         let this = self.clone();
         let cloned_link_def = link_def.clone();
-        tokio::spawn(async move { this.dispatch_chunk(&cloned_link_def, &fc).await });
+        tokio::spawn(async move { this.dispatch_chunk(&cloned_link_def, fc).await });
+        //tokio::spawn(async move { this.dispatch_chunk(&cloned_link_def, &fc).await });
 
         Ok(())
     }
 
-    async fn dispatch_chunk(&self, ld: &LinkDefinition, chunk: &FileChunk) {
+    //async fn dispatch_chunk(&self, ld: &LinkDefinition, chunk: &FileChunk) {
+    async fn dispatch_chunk(&self, ld: &LinkDefinition, chunk: FileChunk) {
         let ld_clone = ld.clone();
         let chunk_clone = chunk.clone();
         let handle = tokio::runtime::Handle::current();
@@ -541,33 +543,46 @@ impl Blobstore for BlobstoreS3Provider {
         let handle = tokio::runtime::Handle::current();
         //futures::executor::block_on(async {
         async {
-            handle
-                .spawn(async move {
-                    for idx in 0..chunk_count {
-                        this.manage_chunk_dispatch(
-                            idx,
-                            s3_client.clone(),
-                            container_id.clone(),
-                            blob_id.clone(),
-                            chunk_size,
-                            byte_size,
-                            actor_id.clone(),
-                        )
-                        .await
-                        .map_err(|e| RpcError::from(format!("start_download(): {}", e)))
-                        .unwrap();
-                    }
-                })
-                .await
-                .map_err(|e| RpcError::from(format!("start_download() handle spawn(): {}", e)))
-                .unwrap();
+            for idx in 0..chunk_count {
+                // START FOR LOOP
+                let actor_id_clone = actor_id.clone();
+                let s3_client_clone = s3_client.clone();
+                let container_id_clone = container_id.clone();
+                let blob_id_clone = blob_id.clone();
+                let this_clone = this.clone();
+                handle
+                    .spawn(async move {
+                        this_clone
+                            .manage_chunk_dispatch(
+                                idx,
+                                s3_client_clone,
+                                container_id_clone,
+                                blob_id_clone,
+                                chunk_size,
+                                byte_size,
+                                actor_id_clone,
+                            )
+                            .await
+                            .map_err(|e| RpcError::from(format!("start_download(): {}", e)))
+                            .unwrap();
+                    })
+                    .await
+                    .map_err(|e| RpcError::from(format!("start_download() handle spawn(): {}", e)))
+                    .unwrap(); // end handle.spawn()
+            } // END FOR LOOP
+            Ok(BlobstoreResult {
+                success: true,
+                error: None,
+            })
         }
-        .await;
+        .await
         //});
+        /*
         Ok(BlobstoreResult {
             success: true,
             error: None,
         })
+        */
     }
 
     /// start_upload(self, ctx, arg: &FileChunk) -> RpcResult<BlobstoreResult>
