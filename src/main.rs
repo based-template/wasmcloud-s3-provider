@@ -541,9 +541,13 @@ impl Blobstore for BlobstoreS3Provider {
 
         let chunk_count = expected_chunks(byte_size, chunk_size);
         let handle = tokio::runtime::Handle::current();
+        let start_idx = match arg.start_idx {
+            Some(idx) => idx,
+            None => 0,
+        };
         //futures::executor::block_on(async {
         async {
-            for idx in 0..chunk_count {
+            for idx in start_idx..chunk_count {
                 // START FOR LOOP
                 let actor_id_clone = actor_id.clone();
                 let s3_client_clone = s3_client.clone();

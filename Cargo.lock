@@ -230,21 +230,21 @@ checksum = "bef38d45163c2f1dde094a7dfd33ccf595c92905c8f8f4fdc18d06fb1037718a"
 
 [[package]]
 name = "blobstore-interface"
-version = "0.1.0"
-source = "git+https://github.com/based-template/auxiliary-blobstore-interface.git#d5d5f88f0e52176a5fce80495a89f545ba26c833"
+version = "0.2.0"
+source = "git+https://github.com/based-template/auxiliary-blobstore-interface.git#0eebfc14480dc33bd40e8c1d94c42d713272c07b"
 dependencies = [
  "async-trait",
  "futures 0.3.17",
  "serde",
  "serde_bytes",
  "serde_json",
- "wasmbus-rpc 0.5.2 (git+https://github.com/based-template/weld.git)",
+ "wasmbus-rpc 0.5.2",
  "weld-codegen",
 ]
 
 [[package]]
 name = "blobstore-s3"
-version = "0.2.13"
+version = "0.2.14"
 dependencies = [
  "async-trait",
  "base64",
@@ -268,7 +268,7 @@ dependencies = [
  "thiserror",
  "tokio",
  "toml",
- "wasmbus-rpc 0.5.2 (git+https://github.com/based-template/weld.git)",
+ "wasmbus-rpc 0.5.2",
  "wasmcloud-test-util",
 ]
 
@@ -304,9 +304,9 @@ dependencies = [
 
 [[package]]
 name = "blocking"
-version = "1.0.2"
+version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c5e170dbede1f740736619b776d7251cb1b9095c435c34d8ca9f57fcd2f335e9"
+checksum = "046e47d4b2d391b1f6f8b407b1deb8dee56c1852ccd868becf2710f601b5f427"
 dependencies = [
  "async-channel",
  "async-task",
@@ -348,9 +348,9 @@ checksum = "631ae5198c9be5e753e5cc215e1bd73c2b466a3565173db433f52bb9d3e66dba"
 
 [[package]]
 name = "cc"
-version = "1.0.71"
+version = "1.0.72"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "79c2681d6594606957bbb8631c4b90a7fcaaa72cdb714743a437b156d6a7eedd"
+checksum = "22a9137b95ea06864e018375b72adfb7db6e6f68cfc8df5a04d00288050485ee"
 
 [[package]]
 name = "cfg-if"
@@ -1053,9 +1053,9 @@ checksum = "eabb4a44450da02c90444cf74558da904edde8fb4e9035a9a6a4e15445af0bd7"
 
 [[package]]
 name = "handlebars"
-version = "4.1.3"
+version = "4.1.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "66b09e2322d20d14bc2572401ce7c1d60b4748580a76c230ed9c1f8938f0c833"
+checksum = "e1874024f4a29f47d609014caec0b1c866f1c1eb0661a09c9733ecc4757f5f88"
 dependencies = [
  "log",
  "pest",
@@ -1340,9 +1340,9 @@ dependencies = [
 
 [[package]]
 name = "libc"
-version = "0.2.106"
+version = "0.2.107"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a60553f9a9e039a333b4e9b20573b9e9b9c0bb3a11e201ccc48ef4283456d673"
+checksum = "fbe5e23404da5b4f555ef85ebed98fb4083e55a00c317800bc2a50ede9f3d219"
 
 [[package]]
 name = "lock_api"
@@ -1480,9 +1480,9 @@ dependencies = [
 
 [[package]]
 name = "nats"
-version = "0.13.1"
+version = "0.15.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "33f47fab79b62a75d2bf97663f049bfd1ade8c9c5fdae1512ec65a66d0b6c282"
+checksum = "2a3097b182107db2cf690280d61f23f17ee31d49f3994ad152ee6a10261f77c3"
 dependencies = [
  "base64",
  "base64-url",
@@ -1510,9 +1510,9 @@ dependencies = [
 
 [[package]]
 name = "nats"
-version = "0.15.2"
+version = "0.16.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2a3097b182107db2cf690280d61f23f17ee31d49f3994ad152ee6a10261f77c3"
+checksum = "9d777a1844c3c5f4148df755a978fd99bb27c898d9bf016de723cf3ffcea5f5d"
 dependencies = [
  "base64",
  "base64-url",
@@ -1534,6 +1534,7 @@ dependencies = [
  "rustls-native-certs",
  "serde",
  "serde_json",
+ "url",
  "webpki",
  "winapi",
 ]
@@ -1719,9 +1720,9 @@ dependencies = [
 
 [[package]]
 name = "paste"
-version = "1.0.5"
+version = "1.0.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "acbf547ad0c65e31259204bd90935776d1c693cec2f4ff7abb7a1bbbd40dfe58"
+checksum = "0744126afe1a6dd7f394cb50a716dbe086cb06e255e53d8d0185d82828358fb5"
 
 [[package]]
 name = "percent-encoding"
@@ -2586,9 +2587,9 @@ dependencies = [
 
 [[package]]
 name = "serde_json"
-version = "1.0.68"
+version = "1.0.70"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0f690853975602e1bfe1ccbf50504d67174e3bcf340f23b5ea9992e0587a52d8"
+checksum = "e277c495ac6cd1a01a58d0a0c574568b4d1ddf14f59965c6a58b8d96400b54f3"
 dependencies = [
  "itoa",
  "ryu",
@@ -2919,9 +2920,9 @@ dependencies = [
 
 [[package]]
 name = "tinyvec"
-version = "1.5.0"
+version = "1.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f83b2a3d4d9091d0abd7eba4dc2710b1718583bd4d8992e2190720ea38f391f7"
+checksum = "2c1c1d5a42b6245520c249549ec267180beaffcc0615401ac8e31853d4b6d8d2"
 dependencies = [
  "tinyvec_macros",
 ]
@@ -3283,40 +3284,6 @@ dependencies = [
 [[package]]
 name = "wasmbus-rpc"
 version = "0.5.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8875f45e1c7a1b75a0a9dc66a570524ead1b298f9919ec3b7a768941974e4524"
-dependencies = [
- "async-trait",
- "base64",
- "cfg-if 1.0.0",
- "chrono",
- "crossbeam",
- "data-encoding",
- "futures 0.3.17",
- "log",
- "minicbor",
- "nats 0.13.1",
- "once_cell",
- "pin-utils",
- "ratsio_fork_040 0.4.1",
- "ring",
- "rmp-serde",
- "serde",
- "serde_bytes",
- "serde_json",
- "thiserror",
- "tokio",
- "tokio-timer",
- "toml",
- "uuid",
- "wascap",
- "wasmbus-macros",
- "weld-codegen",
-]
-
-[[package]]
-name = "wasmbus-rpc"
-version = "0.5.2"
 source = "git+https://github.com/based-template/weld.git#ead4720b1f361accc7d9a7723794eb61a859cf1f"
 dependencies = [
  "async-trait",
@@ -3348,6 +3315,40 @@ dependencies = [
 ]
 
 [[package]]
+name = "wasmbus-rpc"
+version = "0.5.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e88547a790cfed7525a55a51de8fc8ecb877fb741fb9a35e92486a2ab5b14712"
+dependencies = [
+ "async-trait",
+ "base64",
+ "cfg-if 1.0.0",
+ "chrono",
+ "crossbeam",
+ "data-encoding",
+ "futures 0.3.17",
+ "log",
+ "minicbor",
+ "nats 0.16.0",
+ "once_cell",
+ "pin-utils",
+ "ratsio_fork_040 0.4.1",
+ "ring",
+ "rmp-serde",
+ "serde",
+ "serde_bytes",
+ "serde_json",
+ "thiserror",
+ "tokio",
+ "tokio-timer",
+ "toml",
+ "uuid",
+ "wascap",
+ "wasmbus-macros",
+ "weld-codegen",
+]
+
+[[package]]
 name = "wasmcloud-interface-testing"
 version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3358,7 +3359,7 @@ dependencies = [
  "serde",
  "serde_bytes",
  "serde_json",
- "wasmbus-rpc 0.5.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "wasmbus-rpc 0.5.4",
  "weld-codegen",
 ]
 
@@ -3380,7 +3381,7 @@ dependencies = [
  "tokio",
  "toml",
  "wascap",
- "wasmbus-rpc 0.5.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "wasmbus-rpc 0.5.4",
  "wasmcloud-interface-testing",
 ]
 
@@ -3491,18 +3492,18 @@ checksum = "d2d7d3948613f75c98fd9328cfdcc45acc4d360655289d0a7d4ec931392200a3"
 
 [[package]]
 name = "zeroize"
-version = "1.4.2"
+version = "1.4.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bf68b08513768deaa790264a7fac27a58cbf2705cfcdc9448362229217d7e970"
+checksum = "d68d9dcec5f9b43a30d38c49f91dfedfaac384cb8f085faca366c26207dd1619"
 dependencies = [
  "zeroize_derive",
 ]
 
 [[package]]
 name = "zeroize_derive"
-version = "1.2.0"
+version = "1.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bdff2024a851a322b08f179173ae2ba620445aef1e838f0c196820eade4ae0c7"
+checksum = "65f1a51723ec88c66d5d1fe80c841f17f63587d6691901d66be9bec6c3b51f73"
 dependencies = [
  "proc-macro2 1.0.32",
  "quote 1.0.10",

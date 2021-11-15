@@ -1,6 +1,6 @@
 [package]
 name = "blobstore-s3"
-version = "0.2.13"
+version = "0.2.14"
 edition = "2018"
 resolver = "2"
 
